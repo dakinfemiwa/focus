@@ -18,7 +18,11 @@ export const metadata: Metadata = {
   description: "Goal-based productivity planner",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+type LayoutProps = {
+  children: React.ReactNode;
+};
+
+export default function RootLayout({ children }: LayoutProps) {
   return (
     <html
       lang="en"
