@@ -1,10 +1,17 @@
+/// <reference types="vite/client" />
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
-import { newConvexTest } from "./testUtils";
+import { newConvexTest, OTHER_USER, TEST_USER } from "./testUtils";
+
+const modules = import.meta.glob("./**/*.ts");
+
+function asUser() {
+  return newConvexTest(modules).withIdentity(TEST_USER);
+}
 
 describe("createGoal", () => {
   test("creates a goal and returns an id that resolves to the stored name", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const goalId = await t.mutation(api.goals.createGoal, {
       goalName: "Get a First",
@@ -17,7 +24,7 @@ describe("createGoal", () => {
 
 describe("getGoals", () => {
   test("returns every created goal", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     await t.mutation(api.goals.createGoal, { goalName: "Get a First" });
     await t.mutation(api.goals.createGoal, { goalName: "Build Organise" });
@@ -31,7 +38,7 @@ describe("getGoals", () => {
   });
 
   test("returns an empty array when there are no goals", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const goals = await t.query(api.goals.getGoals, {});
 
@@ -41,7 +48,7 @@ describe("getGoals", () => {
 
 describe("updateGoal", () => {
   test("renames the target goal without touching other goals", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const targetId = await t.mutation(api.goals.createGoal, {
       goalName: "Get a First",
@@ -63,7 +70,7 @@ describe("updateGoal", () => {
   });
 
   test("rejects updating a goal that no longer exists", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const goalId = await t.mutation(api.goals.createGoal, {
       goalName: "Get a First",
@@ -81,7 +88,7 @@ describe("updateGoal", () => {
 
 describe("deleteGoal", () => {
   test("removes the goal from both getGoal and getGoals", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const goalId = await t.mutation(api.goals.createGoal, {
       goalName: "Get a First",
@@ -97,7 +104,7 @@ describe("deleteGoal", () => {
   });
 
   test("rejects deleting a goal that no longer exists", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const goalId = await t.mutation(api.goals.createGoal, {
       goalName: "Get a First",
@@ -112,7 +119,7 @@ describe("deleteGoal", () => {
 
 describe("invalid goal data", () => {
   test("rejects an id from a different table where a goal id is expected", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const subGoalId = await t.mutation(api.subGoals.createSubGoal, {
       goalId: await t.mutation(api.goals.createGoal, { goalName: "Any" }),
@@ -126,7 +133,7 @@ describe("invalid goal data", () => {
   });
 
   test("rejects an empty or whitespace-only goal name", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     await expect(
       t.mutation(api.goals.createGoal, { goalName: "" }),
@@ -134,5 +141,52 @@ describe("invalid goal data", () => {
     await expect(
       t.mutation(api.goals.createGoal, { goalName: "   " }),
     ).rejects.toThrow();
+  });
+});
+
+describe("authentication", () => {
+  test("rejects reading and creating goals with no identity", async () => {
+    const t = newConvexTest(modules);
+
+    await expect(t.query(api.goals.getGoals, {})).rejects.toThrow();
+    await expect(
+      t.mutation(api.goals.createGoal, { goalName: "Get a First" }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("cross-user isolation", () => {
+  test("a user's goals are invisible to another user", async () => {
+    const owner = asUser();
+    const intruder = newConvexTest(modules).withIdentity(OTHER_USER);
+
+    const goalId = await owner.mutation(api.goals.createGoal, {
+      goalName: "Get a First",
+    });
+
+    expect(await intruder.query(api.goals.getGoals, {})).toEqual([]);
+    expect(await intruder.query(api.goals.getGoal, { goalId })).toBeNull();
+  });
+
+  test("another user cannot rename or delete someone else's goal", async () => {
+    const owner = asUser();
+    const intruder = newConvexTest(modules).withIdentity(OTHER_USER);
+
+    const goalId = await owner.mutation(api.goals.createGoal, {
+      goalName: "Get a First",
+    });
+
+    await expect(
+      intruder.mutation(api.goals.updateGoal, {
+        goalId,
+        goalName: "Hijacked",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.goals.deleteGoal, { goalId }),
+    ).rejects.toThrow();
+
+    const goal = await owner.query(api.goals.getGoal, { goalId });
+    expect(goal?.goalName).toBe("Get a First");
   });
 });

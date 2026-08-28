@@ -1,10 +1,22 @@
+/// <reference types="vite/client" />
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
-import { newConvexTest, seedHierarchy } from "./testUtils";
+import {
+  newConvexTest,
+  OTHER_USER,
+  seedHierarchy,
+  TEST_USER,
+} from "./testUtils";
+
+const modules = import.meta.glob("./**/*.ts");
+
+function asUser() {
+  return newConvexTest(modules).withIdentity(TEST_USER);
+}
 
 describe("createTask", () => {
   test("persists every field and defaults status to todo", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId } = await seedHierarchy(t);
 
     const taskId = await t.mutation(api.tasks.createTask, {
@@ -30,7 +42,7 @@ describe("createTask", () => {
   test.each([-1, 11])(
     "rejects a priority of %i, outside 0-10",
     async (priority) => {
-      const t = newConvexTest();
+      const t = asUser();
       const { subGoalAId } = await seedHierarchy(t);
 
       await expect(
@@ -45,7 +57,7 @@ describe("createTask", () => {
   );
 
   test.each([0, 10])("accepts a priority of %i, the boundary values", async (priority) => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId } = await seedHierarchy(t);
 
     const taskId = await t.mutation(api.tasks.createTask, {
@@ -62,7 +74,7 @@ describe("createTask", () => {
   test.each([0, -5])(
     "rejects an estimated time of %i minutes",
     async (estimatedMinutes) => {
-      const t = newConvexTest();
+      const t = asUser();
       const { subGoalAId } = await seedHierarchy(t);
 
       await expect(
@@ -77,7 +89,7 @@ describe("createTask", () => {
   );
 
   test("a rejected create writes nothing to the sub-goal's task list", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId } = await seedHierarchy(t);
     const before = await t.query(api.tasks.getTasks, {
       subGoalId: subGoalAId,
@@ -101,7 +113,7 @@ describe("createTask", () => {
 
 describe("updateTaskStatus", () => {
   test("moves a task through todo, in_progress, completed and back", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId } = await seedHierarchy(t);
 
     await t.mutation(api.tasks.updateTaskStatus, {
@@ -130,7 +142,7 @@ describe("updateTaskStatus", () => {
   });
 
   test("rejects a status outside the known union", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId } = await seedHierarchy(t);
 
     await expect(
@@ -145,7 +157,7 @@ describe("updateTaskStatus", () => {
 
 describe("completeTask", () => {
   test("marks a task completed, and is idempotent", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId } = await seedHierarchy(t);
 
     await t.mutation(api.tasks.completeTask, { taskId: taskAId });
@@ -158,7 +170,7 @@ describe("completeTask", () => {
 
 describe("updateTask", () => {
   test("enforces the same priority and minutes rules as createTask", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId } = await seedHierarchy(t);
 
     await expect(
@@ -173,7 +185,7 @@ describe("updateTask", () => {
   });
 
   test("a rejected update leaves the stored task unchanged", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId } = await seedHierarchy(t);
     const before = await t.query(api.tasks.getTask, { taskId: taskAId });
 
@@ -186,7 +198,7 @@ describe("updateTask", () => {
   });
 
   test("updating priority alone does not clobber title, minutes, or due date", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId } = await seedHierarchy(t);
     const taskId = await t.mutation(api.tasks.createTask, {
       task: "Write chapter 3",
@@ -208,7 +220,7 @@ describe("updateTask", () => {
   });
 
   test("setting a due date on a task that had none persists it", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId } = await seedHierarchy(t);
 
     await t.mutation(api.tasks.updateTask, {
@@ -221,7 +233,7 @@ describe("updateTask", () => {
   });
 
   test("changing an existing due date persists the new value", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId } = await seedHierarchy(t);
     const taskId = await t.mutation(api.tasks.createTask, {
       task: "Write chapter 3",
@@ -246,7 +258,7 @@ describe("updateTask", () => {
     // `dueDate: undefined` — it simply omits the key, which patch leaves
     // alone. This documents current behaviour: once set, a due date cannot
     // be cleared through updateTask. See implementation plan note T-10.
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId } = await seedHierarchy(t);
     const taskId = await t.mutation(api.tasks.createTask, {
       task: "Write chapter 3",
@@ -265,7 +277,7 @@ describe("updateTask", () => {
 
 describe("deleteTask", () => {
   test("removes it from getTask, getTasks, and getAllTasks", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { taskAId, subGoalAId } = await seedHierarchy(t);
 
     await t.mutation(api.tasks.deleteTask, { taskId: taskAId });
@@ -284,7 +296,7 @@ describe("deleteTask", () => {
 
 describe("getTasks", () => {
   test("returns only the requested sub-goal's tasks", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId, subGoalBId, taskAId, taskBId } =
       await seedHierarchy(t);
 
@@ -302,7 +314,7 @@ describe("getTasks", () => {
 
 describe("invalid task data", () => {
   test("rejects creating a task under a deleted sub-goal", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { goalId, subGoalAId } = await seedHierarchy(t);
     void goalId;
 
@@ -319,7 +331,7 @@ describe("invalid task data", () => {
   });
 
   test("rejects a goal id where a sub-goal id is expected", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { goalId } = await seedHierarchy(t);
 
     await expect(
@@ -331,5 +343,85 @@ describe("invalid task data", () => {
         estimatedMinutes: 30,
       }),
     ).rejects.toThrow();
+  });
+
+  test("rejects creating a task under another user's sub-goal", async () => {
+    const owner = asUser();
+    const intruder = newConvexTest(modules).withIdentity(OTHER_USER);
+    const { subGoalAId } = await seedHierarchy(owner);
+
+    await expect(
+      intruder.mutation(api.tasks.createTask, {
+        task: "Should be rejected",
+        subGoalId: subGoalAId,
+        priority: 5,
+        estimatedMinutes: 30,
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("authentication", () => {
+  test("rejects reading and creating tasks with no identity", async () => {
+    const owner = asUser();
+    const anon = newConvexTest(modules);
+    const { subGoalAId } = await seedHierarchy(owner);
+
+    await expect(anon.query(api.tasks.getAllTasks, {})).rejects.toThrow();
+    await expect(
+      anon.query(api.tasks.getTasks, { subGoalId: subGoalAId }),
+    ).rejects.toThrow();
+    await expect(
+      anon.mutation(api.tasks.createTask, {
+        task: "Anything",
+        subGoalId: subGoalAId,
+        priority: 5,
+        estimatedMinutes: 30,
+      }),
+    ).rejects.toThrow();
+  });
+});
+
+describe("cross-user isolation", () => {
+  test("a user's tasks are invisible to another user", async () => {
+    const owner = asUser();
+    const intruder = newConvexTest(modules).withIdentity(OTHER_USER);
+    const { subGoalAId, taskAId } = await seedHierarchy(owner);
+
+    expect(await intruder.query(api.tasks.getAllTasks, {})).toEqual([]);
+    expect(
+      await intruder.query(api.tasks.getTasks, { subGoalId: subGoalAId }),
+    ).toEqual([]);
+    expect(
+      await intruder.query(api.tasks.getTask, { taskId: taskAId }),
+    ).toBeNull();
+  });
+
+  test("another user cannot update, complete, or delete someone else's task", async () => {
+    const owner = asUser();
+    const intruder = newConvexTest(modules).withIdentity(OTHER_USER);
+    const { taskAId } = await seedHierarchy(owner);
+
+    await expect(
+      intruder.mutation(api.tasks.updateTask, {
+        taskId: taskAId,
+        task: "Hijacked",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.tasks.updateTaskStatus, {
+        taskId: taskAId,
+        status: "completed",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.tasks.completeTask, { taskId: taskAId }),
+    ).rejects.toThrow();
+    await expect(
+      intruder.mutation(api.tasks.deleteTask, { taskId: taskAId }),
+    ).rejects.toThrow();
+
+    const task = await owner.query(api.tasks.getTask, { taskId: taskAId });
+    expect(task).toMatchObject({ task: "Write chapter 3", status: "todo" });
   });
 });

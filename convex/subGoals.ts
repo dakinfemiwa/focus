@@ -1,35 +1,50 @@
 import { v } from "convex/values";
+import { requireUserId } from "./auth";
 import { mutation, query } from "./_generated/server";
 
 /**
- * Get all sub-goals belonging to a goal.
+ * Get all sub-goals belonging to a goal, scoped to the authenticated user.
+ * Returns an empty list if the goal doesn't exist or isn't owned by the
+ * caller, without distinguishing the two.
  */
 export const getSubGoals = query({
   args: {
     goalId: v.id("goals"),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+
     return await ctx.db
       .query("subGoals")
-      .withIndex("by_goal", (q) => q.eq("goalId", args.goalId))
+      .withIndex("by_user_and_goal", (q) =>
+        q.eq("userId", userId).eq("goalId", args.goalId),
+      )
       .collect();
   },
 });
 
 /**
- * Get a single sub-goal.
+ * Get a single sub-goal. Returns null if it doesn't exist or isn't owned by
+ * the authenticated user, without distinguishing the two.
  */
 export const getSubGoal = query({
   args: {
     subGoalId: v.id("subGoals"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.subGoalId);
+    const userId = await requireUserId(ctx);
+
+    const subGoal = await ctx.db.get(args.subGoalId);
+    if (!subGoal || subGoal.userId !== userId) {
+      return null;
+    }
+
+    return subGoal;
   },
 });
 
 /**
- * Create a sub-goal under a goal.
+ * Create a sub-goal under a goal owned by the authenticated user.
  */
 export const createSubGoal = mutation({
   args: {
@@ -37,24 +52,27 @@ export const createSubGoal = mutation({
     goalId: v.id("goals"),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+
     if (!args.name.trim()) {
       throw new Error("Sub-goal name cannot be empty.");
     }
 
     const goal = await ctx.db.get(args.goalId);
-    if (!goal) {
+    if (!goal || goal.userId !== userId) {
       throw new Error("Goal not found.");
     }
 
     return await ctx.db.insert("subGoals", {
       name: args.name,
       goalId: args.goalId,
+      userId,
     });
   },
 });
 
 /**
- * Update a sub-goal.
+ * Update a sub-goal owned by the authenticated user.
  */
 export const updateSubGoal = mutation({
   args: {
@@ -62,6 +80,13 @@ export const updateSubGoal = mutation({
     name: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+
+    const subGoal = await ctx.db.get(args.subGoalId);
+    if (!subGoal || subGoal.userId !== userId) {
+      throw new Error("Sub-goal not found.");
+    }
+
     await ctx.db.patch(args.subGoalId, {
       name: args.name,
     });
@@ -69,15 +94,18 @@ export const updateSubGoal = mutation({
 });
 
 /**
- * Delete a sub-goal, cascading to its tasks.
+ * Delete a sub-goal owned by the authenticated user, cascading to its
+ * tasks.
  */
 export const deleteSubGoal = mutation({
   args: {
     subGoalId: v.id("subGoals"),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+
     const subGoal = await ctx.db.get(args.subGoalId);
-    if (!subGoal) {
+    if (!subGoal || subGoal.userId !== userId) {
       throw new Error("Sub-goal not found.");
     }
 

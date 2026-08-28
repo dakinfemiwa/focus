@@ -1,10 +1,22 @@
+/// <reference types="vite/client" />
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
-import { newConvexTest, seedHierarchy } from "./testUtils";
+import {
+  newConvexTest,
+  OTHER_USER,
+  seedHierarchy,
+  TEST_USER,
+} from "./testUtils";
+
+const modules = import.meta.glob("./**/*.ts");
+
+function asUser() {
+  return newConvexTest(modules).withIdentity(TEST_USER);
+}
 
 describe("hierarchy round trip", () => {
   test("a task's subGoalId leads back to the sub-goal's goalId, and on to the goal", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { goalId, subGoalAId, taskAId } = await seedHierarchy(t);
 
     const task = await t.query(api.tasks.getTask, { taskId: taskAId });
@@ -23,7 +35,7 @@ describe("hierarchy round trip", () => {
 
 describe("deleting a goal", () => {
   test("leaves no sub-goals pointing at the deleted goal", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { goalId, subGoalAId, subGoalBId } = await seedHierarchy(t);
 
     await t.mutation(api.goals.deleteGoal, { goalId });
@@ -37,7 +49,7 @@ describe("deleting a goal", () => {
   });
 
   test("leaves no tasks belonging to the deleted goal's sub-goals", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { goalId, taskAId, taskBId } = await seedHierarchy(t);
 
     await t.mutation(api.goals.deleteGoal, { goalId });
@@ -57,7 +69,7 @@ describe("deleting a goal", () => {
 
 describe("deleting a sub-goal", () => {
   test("leaves no tasks pointing at the deleted sub-goal", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId, taskAId } = await seedHierarchy(t);
 
     await t.mutation(api.subGoals.deleteSubGoal, { subGoalId: subGoalAId });
@@ -71,7 +83,7 @@ describe("deleting a sub-goal", () => {
   });
 
   test("does not affect the sibling sub-goal or its tasks", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId, subGoalBId, taskBId } = await seedHierarchy(t);
 
     await t.mutation(api.subGoals.deleteSubGoal, { subGoalId: subGoalAId });
@@ -90,7 +102,7 @@ describe("deleting a sub-goal", () => {
 
 describe("isolation between goals", () => {
   test("identically-named sub-goals and tasks under different goals stay separate", async () => {
-    const t = newConvexTest();
+    const t = asUser();
 
     const goalAId = await t.mutation(api.goals.createGoal, {
       goalName: "Goal",
@@ -137,7 +149,7 @@ describe("isolation between goals", () => {
 
 describe("getAllTasks vs getTasks", () => {
   test("getAllTasks spans every goal, and getTasks partitions it exactly", async () => {
-    const t = newConvexTest();
+    const t = asUser();
     const { subGoalAId, subGoalBId, taskAId, taskBId } =
       await seedHierarchy(t);
 
@@ -155,5 +167,31 @@ describe("getAllTasks vs getTasks", () => {
     expect(
       [...subGoalATasks, ...subGoalBTasks].map((x) => x._id).sort(),
     ).toEqual(allTasks.map((x) => x._id).sort());
+  });
+});
+
+describe("cross-user isolation across the full hierarchy", () => {
+  test("none of one user's goals, sub-goals, or tasks are visible to another user", async () => {
+    const owner = asUser();
+    const intruder = newConvexTest(modules).withIdentity(OTHER_USER);
+    const { goalId, subGoalAId, taskAId } = await seedHierarchy(owner);
+
+    expect(await intruder.query(api.goals.getGoals, {})).toEqual([]);
+    expect(
+      await intruder.query(api.subGoals.getSubGoals, { goalId }),
+    ).toEqual([]);
+    expect(
+      await intruder.query(api.tasks.getTasks, { subGoalId: subGoalAId }),
+    ).toEqual([]);
+    expect(await intruder.query(api.tasks.getAllTasks, {})).toEqual([]);
+    expect(await intruder.query(api.goals.getGoal, { goalId })).toBeNull();
+    expect(
+      await intruder.query(api.subGoals.getSubGoal, {
+        subGoalId: subGoalAId,
+      }),
+    ).toBeNull();
+    expect(
+      await intruder.query(api.tasks.getTask, { taskId: taskAId }),
+    ).toBeNull();
   });
 });

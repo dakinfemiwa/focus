@@ -1,3 +1,5 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
 import { ConvexClientProvider } from "@/components/providers/convex-provider";
 import type { Metadata } from "next";
 import { DM_Sans, Space_Grotesk } from "next/font/google";
@@ -29,7 +31,9 @@ export default function RootLayout({ children }: LayoutProps) {
       className={`${bodyFont.variable} ${displayFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ConvexClientProvider>{children}</ConvexClientProvider>
+        <ClerkProvider appearance={{ theme: shadcn }}>
+          <ConvexClientProvider>{children}</ConvexClientProvider>
+        </ClerkProvider>
       </body>
     </html>
   );
