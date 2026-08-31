@@ -3,20 +3,22 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
 import { getPriorityStyles } from "@/lib/priority";
+import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
 import { addDays, format, isSameDay, parseISO, startOfWeek } from "date-fns";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 export default function CalendarPage() {
+  const { isSignedIn } = useAuth();
   const [view, setView] = useState<"month" | "week">("month");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date(),
   );
-  const tasks = useQuery(api.tasks.getAllTasks) ?? [];
+  const tasks = useQuery(api.tasks.getAllTasks, isSignedIn ? {} : "skip") ?? [];
 
   const selectedDateKey = selectedDate
     ? format(selectedDate, "yyyy-MM-dd")
@@ -27,7 +29,9 @@ export default function CalendarPage() {
   const scheduledDates = tasks.flatMap((task) =>
     task.dueDate ? [parseISO(task.dueDate)] : [],
   );
-  const weekStart = startOfWeek(selectedDate ?? new Date(), { weekStartsOn: 1 });
+  const weekStart = startOfWeek(selectedDate ?? new Date(), {
+    weekStartsOn: 1,
+  });
   const weekDays = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
   );
@@ -152,47 +156,41 @@ function DayAgenda({
 }) {
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
-            <h2 className="text-lg font-medium">
-              {selectedDate
-                ? format(selectedDate, "EEEE, MMM d")
-                : "Select a date"}
-            </h2>
+      <h2 className="text-lg font-medium">
+        {selectedDate ? format(selectedDate, "EEEE, MMM d") : "Select a date"}
+      </h2>
 
-            <div className="mt-4 space-y-3">
-              {tasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No tasks scheduled for this day.
-                </p>
-              ) : (
-                tasks.map((task) => (
-                  <div
-                    key={task._id}
-                    className={`rounded-lg border border-l-4 p-3 ${getPriorityStyles(task.priority).rail} ${
-                      task.status === "completed"
-                        ? "bg-muted/50 opacity-70"
-                        : ""
-                    }`}
-                  >
-                    <div
-                      className={
-                        task.status === "completed"
-                          ? "line-through"
-                          : "font-medium"
-                      }
-                    >
-                      {task.task}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {task.status === "completed" ? "Completed · " : "Open · "}
-                      <span className={getPriorityStyles(task.priority).badge}>
-                        Priority {task.priority}
-                      </span>{" "}
-                      · {task.estimatedMinutes} min
-                    </div>
-                  </div>
-                ))
-              )}
+      <div className="mt-4 space-y-3">
+        {tasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No tasks scheduled for this day.
+          </p>
+        ) : (
+          tasks.map((task) => (
+            <div
+              key={task._id}
+              className={`rounded-lg border border-l-4 p-3 ${getPriorityStyles(task.priority).rail} ${
+                task.status === "completed" ? "bg-muted/50 opacity-70" : ""
+              }`}
+            >
+              <div
+                className={
+                  task.status === "completed" ? "line-through" : "font-medium"
+                }
+              >
+                {task.task}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {task.status === "completed" ? "Completed · " : "Open · "}
+                <span className={getPriorityStyles(task.priority).badge}>
+                  Priority {task.priority}
+                </span>{" "}
+                · {task.estimatedMinutes} min
+              </div>
             </div>
-          </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

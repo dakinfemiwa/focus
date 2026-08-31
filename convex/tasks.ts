@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { requireUserId } from "./auth";
 import { mutation, query } from "./_generated/server";
+import { requireUserId } from "./auth";
 
 const schedulingProfileFields = {
   categoryId: v.optional(v.id("taskCategories")),
@@ -36,9 +36,7 @@ function validateSchedulingProfile(args: {
   const values = [
     args.attentionDemand,
     args.interruptibility,
-    ...(args.concurrencyProfile
-      ? Object.values(args.concurrencyProfile)
-      : []),
+    ...(args.concurrencyProfile ? Object.values(args.concurrencyProfile) : []),
   ];
 
   if (values.some((value) => value !== undefined && (value < 0 || value > 3))) {

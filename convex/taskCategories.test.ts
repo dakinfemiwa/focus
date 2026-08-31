@@ -14,14 +14,15 @@ describe("task categories and scheduling profiles", () => {
 
     const categories = await t.query(api.taskCategories.getTaskCategories, {});
     expect(categories).toHaveLength(18);
-    expect(categories.find((category) => category.slug === "programming"))
-      .toMatchObject({
-        name: "Programming",
-        defaultProfile: {
-          attentionDemand: 3,
-          cognitive: 3,
-        },
-      });
+    expect(
+      categories.find((category) => category.slug === "programming"),
+    ).toMatchObject({
+      name: "Programming",
+      defaultProfile: {
+        attentionDemand: 3,
+        cognitive: 3,
+      },
+    });
   });
 
   test("persists explicit task-specific scheduling values", async () => {
@@ -54,13 +55,15 @@ describe("task categories and scheduling profiles", () => {
       },
     });
 
-    await expect(t.query(api.tasks.getTask, { taskId })).resolves.toMatchObject({
-      categoryId: programming!._id,
-      attentionDemand: 2,
-      interruptibility: 3,
-      concurrencyProfile: { cognitive: 3, visual: 2 },
-      contextRequirements: { locations: ["desk"], devices: ["laptop"] },
-    });
+    await expect(t.query(api.tasks.getTask, { taskId })).resolves.toMatchObject(
+      {
+        categoryId: programming!._id,
+        attentionDemand: 2,
+        interruptibility: 3,
+        concurrencyProfile: { cognitive: 3, visual: 2 },
+        contextRequirements: { locations: ["desk"], devices: ["laptop"] },
+      },
+    );
   });
 
   test("rejects scheduling values outside the 0-3 scale", async () => {

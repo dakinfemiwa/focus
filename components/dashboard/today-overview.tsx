@@ -6,20 +6,22 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { Task } from "@/types/types";
+import { useAuth } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { TaskCard } from "./task-card";
 
 export function TodayOverview() {
-  const goals = useQuery(api.goals.getGoals) ?? [];
+  const { isSignedIn } = useAuth();
+  const goals = useQuery(api.goals.getGoals, isSignedIn ? {} : "skip") ?? [];
   const [selectedGoalId, setSelectedGoalId] = useState<Id<"goals">>();
   const activeGoalId = selectedGoalId ?? goals[0]?._id;
   const subGoals =
     useQuery(
       api.subGoals.getSubGoals,
-      activeGoalId ? { goalId: activeGoalId } : "skip",
+      isSignedIn && activeGoalId ? { goalId: activeGoalId } : "skip",
     ) ?? [];
-  const tasks = useQuery(api.tasks.getAllTasks) ?? [];
+  const tasks = useQuery(api.tasks.getAllTasks, isSignedIn ? {} : "skip") ?? [];
   const createGoal = useMutation(api.goals.createGoal);
   const createSubGoal = useMutation(api.subGoals.createSubGoal);
   const createTask = useMutation(api.tasks.createTask);
