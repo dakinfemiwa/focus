@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppShellProps } from "@/types/types";
 import { useAuth } from "@clerk/nextjs";
 import { useConvexAuth } from "convex/react";
+import Link from "next/link";
 import { NavItem } from "./nav-item";
 import { Sidebar } from "./sidebar";
 
@@ -35,12 +36,12 @@ export function AppShell({ children }: AppShellProps) {
                 <p className="mt-2 text-sm text-muted-foreground">
                   Your goals and tasks are private to your account.
                 </p>
-                <a
+                <Link
                   href="/sign-in"
                   className={`${buttonVariants({ variant: "default" })} mt-6`}
                 >
                   Continue to sign in
-                </a>
+                </Link>
               </div>
             </div>
           ) : null}
