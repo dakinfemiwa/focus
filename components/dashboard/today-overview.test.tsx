@@ -7,6 +7,15 @@ import {
   resetConvexMocks,
   setQueryResult,
 } from "@/test/convex-mocks";
+import { vi } from "vitest";
+
+vi.mock("@clerk/nextjs", () => ({
+  useAuth: () => ({
+    isLoaded: true,
+    isSignedIn: true,
+  }),
+}));
+
 import { TodayOverview } from "./today-overview";
 
 const goal = { _id: "goal_1", goalName: "Get a First" };
