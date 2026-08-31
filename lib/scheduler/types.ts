@@ -63,6 +63,7 @@ export type SchedulingProblem = {
   tasks: ReadonlyArray<SchedulingTask>;
   workingPeriods: ReadonlyArray<WorkingPeriod>;
   constraints?: SchedulingConstraints;
+  currentTime?: Date;
   config?: Partial<SchedulerConfig>;
 };
 
@@ -71,6 +72,7 @@ export type ScheduleViolation = {
   code:
     | "invalid_duration"
     | "invalid_period"
+    | "completed_task"
     | "outside_working_period"
     | "deadline"
     | "earliest_start"

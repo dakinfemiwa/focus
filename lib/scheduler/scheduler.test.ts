@@ -95,6 +95,12 @@ describe("validateSchedule", () => {
     const result = new GreedySolver().solve(baseProblem([completed]));
     expect(result.scheduled).toHaveLength(0);
     expect(result.unscheduled).toHaveLength(0);
+    expect(
+      validateSchedule(
+        [{ task: completed, startTime: date(9), endTime: date(10) }],
+        baseProblem([completed]),
+      ).valid,
+    ).toBe(false);
   });
 });
 

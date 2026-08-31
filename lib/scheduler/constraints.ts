@@ -87,6 +87,13 @@ export function validateSchedule(
   }
 
   for (const item of schedule) {
+    if (item.task.status === "completed") {
+      violations.push({
+        taskId: item.task.id,
+        code: "completed_task",
+        message: "Completed tasks must not be scheduled.",
+      });
+    }
     const expectedEnd = new Date(
       item.startTime.getTime() + durationMs(item.task),
     );
@@ -219,7 +226,11 @@ export function classifyUnscheduledTask(
   if (!problem.workingPeriods.some((period) => period.end > period.start)) {
     return "insufficient_time";
   }
-  if (task.dueDate && task.dueDate.getTime() <= Date.now())
+  if (
+    task.dueDate &&
+    problem.currentTime &&
+    task.dueDate.getTime() <= problem.currentTime.getTime()
+  )
     return "deadline_conflict";
   const hasWindow = candidateStarts(task, problem, schedule).some((start) =>
     problem.workingPeriods.some((period) =>
