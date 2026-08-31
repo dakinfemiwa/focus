@@ -1,13 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test } from "vitest";
 import { api } from "@/convex/_generated/api";
 import {
-  getMutationSpy,
-  resetConvexMocks,
-  setQueryResult,
+    getMutationSpy,
+    resetConvexMocks,
+    setQueryResult,
 } from "@/test/convex-mocks";
-import { vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
@@ -115,7 +114,10 @@ describe("creating a task", () => {
     const createTask = getMutationSpy(api.tasks.createTask);
     render(<TodayOverview />);
 
-    await user.type(screen.getByPlaceholderText(/add a task/i), "  Read paper  ");
+    await user.type(
+      screen.getByPlaceholderText(/add a task/i),
+      "  Read paper  ",
+    );
     await user.click(screen.getByRole("button", { name: /add task/i }));
 
     expect(createTask).toHaveBeenCalledWith(
@@ -192,7 +194,10 @@ describe("creating goals and sub-goals", () => {
     );
     render(<TodayOverview />);
 
-    await user.type(screen.getByLabelText(/new goal name/i), "  Build Organise  ");
+    await user.type(
+      screen.getByLabelText(/new goal name/i),
+      "  Build Organise  ",
+    );
     await user.click(screen.getByRole("button", { name: /create goal/i }));
 
     expect(createGoal).toHaveBeenCalledWith({ goalName: "Build Organise" });
