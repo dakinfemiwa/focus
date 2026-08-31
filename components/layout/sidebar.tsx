@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
 import {
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    Sidebar as SidebarPrimitive,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  Sidebar as SidebarPrimitive,
 } from "@/components/ui/sidebar";
 import { SidebarProps } from "@/types/types";
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
