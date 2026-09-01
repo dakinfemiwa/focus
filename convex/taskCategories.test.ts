@@ -1,9 +1,18 @@
 /// <reference types="vite/client" />
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
-import { newConvexTest, seedHierarchy, TEST_USER } from "./testUtils";
+import {
+    newConvexTest,
+    OTHER_USER,
+    seedHierarchy,
+    TEST_USER,
+} from "./testUtils";
 
 const modules = import.meta.glob("./**/*.ts");
+
+beforeAll(() => {
+  process.env.ADMIN_EMAILS = "admin@example.com";
+});
 
 describe("task categories and scheduling profiles", () => {
   test("seeds the predefined categories idempotently", async () => {
@@ -23,6 +32,14 @@ describe("task categories and scheduling profiles", () => {
         cognitive: 3,
       },
     });
+  });
+
+  test("rejects task category seeding for non-admin users", async () => {
+    const t = newConvexTest(modules).withIdentity(OTHER_USER);
+
+    await expect(
+      t.mutation(api.taskCategories.seedTaskCategories, {}),
+    ).rejects.toThrow(/admin/i);
   });
 
   test("persists explicit task-specific scheduling values", async () => {

@@ -13,8 +13,14 @@ export function newConvexTest(modules: Record<string, () => Promise<unknown>>) {
 type ConvexTestInstance = ReturnType<typeof newConvexTest>;
 type AuthedConvexTest = ReturnType<ConvexTestInstance["withIdentity"]>;
 
-export const TEST_USER = { subject: "user_test_1" };
-export const OTHER_USER = { subject: "user_test_2" };
+export const TEST_USER = {
+  subject: "user_test_1",
+  email: "admin@example.com",
+};
+export const OTHER_USER = {
+  subject: "user_test_2",
+  email: "other@example.com",
+};
 
 /**
  * Seeds a goal with two sub-goals, each holding one task, owned by whichever

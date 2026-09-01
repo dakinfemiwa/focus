@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { requireUserId } from "./auth";
+import { requireAdminUserId, requireUserId } from "./auth";
 
 const profile = (
   attentionDemand: number,
@@ -113,7 +113,7 @@ export const getTaskCategories = query({
 export const seedTaskCategories = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireUserId(ctx);
+    await requireAdminUserId(ctx);
 
     for (const category of TASK_CATEGORY_DEFINITIONS) {
       const existing = await ctx.db
